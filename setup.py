@@ -5,6 +5,7 @@ DATA_FILES = []
 OPTIONS = {
     'packages': ['cv2', 'numpy', 'PIL'],
     'includes': ['tkinter'],
+    'iconfile': 'app_icon.png',
 }
 
 setup(

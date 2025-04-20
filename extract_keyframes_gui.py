@@ -5,6 +5,7 @@ import os
 import sys
 import subprocess
 import json
+from tkinterdnd2 import DND_FILES, TkinterDnD
 from extract_keyframes import extract_keyframes, merge_keyframes
 
 VIDEO_EXTENSIONS = [("MP4 files", "*.mp4"), ("All files", "*.*")]
@@ -157,9 +158,9 @@ def save_config(params):
         pass
 
 def main():
-    root = tk.Tk()
+    root = TkinterDnD.Tk()
     root.title("KeySnap Extractor")
-    root.geometry("540x540")
+    root.geometry("600x600")
     root.configure(bg="#eaf3fa")
 
     # Title
@@ -180,8 +181,22 @@ def main():
     frame1 = tk.Frame(root, bg="#eaf3fa")
     frame1.pack(pady=(0, 5))
     tk.Label(frame1, text="Select MP4 Video:", bg="#eaf3fa", font=("Arial", 12)).pack(side=tk.LEFT, padx=(0, 5))
-    tk.Entry(frame1, textvariable=video_path_var, width=36, font=("Arial", 11)).pack(side=tk.LEFT, padx=5)
+    video_entry = tk.Entry(frame1, textvariable=video_path_var, width=36, font=("Arial", 11))
+    video_entry.pack(side=tk.LEFT, padx=5)
     tk.Button(frame1, text="Browse...", command=lambda: select_video(video_path_var, output_dir_var), font=("Arial", 11), bg="#d0e3fa").pack(side=tk.LEFT, padx=(5, 0))
+    # Drag-and-drop support (whole window)
+    def on_drop(event):
+        files = event.data
+        if files:
+            # Only take the first file
+            path = files.split()[0]
+            if path.lower().endswith('.mp4'):
+                video_path_var.set(path)
+                base = os.path.splitext(os.path.basename(path))[0]
+                new_dir = os.path.join(os.path.expanduser("~"), "Downloads", base)
+                output_dir_var.set(new_dir)
+    root.drop_target_register(DND_FILES)
+    root.dnd_bind('<<Drop>>', on_drop)
 
     # Output folder selection
     frame2 = tk.Frame(root, bg="#eaf3fa")

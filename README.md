@@ -44,6 +44,18 @@ pip install -r requirements.txt
 
 ---
 
+### Run the GUI for development/debug
+
+To launch the graphical user interface (GUI) for testing or development, run:
+
+```
+python extract_keyframes_gui.py
+```
+
+Make sure your virtual environment is activated before running this command.
+
+---
+
 ## FAQ
 
 ### Q1: Why do I get `No module named '_tkinter'` when building or running the app?
