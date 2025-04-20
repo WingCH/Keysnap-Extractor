@@ -1,8 +1,6 @@
 
 # Keyframe Extractor
-
-<video src="readme_resources/demo.mp4" width="500" controls></video>
-
+https://github.com/user-attachments/assets/b258f4cd-bc14-4620-883c-cf2411b8b702
 
 ## What does this project do?
 
