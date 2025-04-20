@@ -123,11 +123,4 @@ pip install -r requirements.txt
 
 ---
 
-## Legacy Architecture (tkinter/legacy)
-
-- The old GUI was based on tkinter and has now been fully replaced by the PyQt5 version
-- macOS packaging with tkinter required special handling of tcl-tk@8; see memory-bank/ and previous README for compatibility details
-
----
-
 For more technical details, design patterns, and development context, please refer to the files in the `memory-bank/` directory.
