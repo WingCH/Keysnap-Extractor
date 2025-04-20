@@ -1,152 +1,133 @@
-
 # Keyframe Extractor
+
+Automatically extract keyframes from videos and merge them into a single image, allowing you to grasp the main content of a video at a glance.
+
 https://github.com/user-attachments/assets/b258f4cd-bc14-4620-883c-cf2411b8b702
-
-## What does this project do?
-
-This project helps you quickly review the main content of a video by automatically extracting keyframes (important screenshots) and combining them into a single image. Instead of watching the whole video, you can see all the important moments at a glance.
-
-## How does it work?
-
-1. The script reads your video file (e.g. `input.mp4`).
-2. It checks every frame and compares it to the previous frames.
-3. If the video becomes "still" (no big changes for a few frames), it saves that frame as a keyframe.
-4. All keyframes are combined into one image, arranged in rows (5 images per row).
-5. Each keyframe shows the timestamp at the bottom left, so you know when it happened in the video.
-
-## Technologies used
-
-- **Python 3**
-- **OpenCV (cv2)**: For reading video and image processing.
-- **Pillow (PIL)**: For image merging and drawing text.
-- **Numpy**: For fast image calculations.
-
-## How to use
-
-1. Put your video file as `input.mp4` in the project folder.
-2. Make sure you have Python 3 and the required packages installed:
-   ```
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-
-After activation, your Terminal prompt will show `(venv)` at the front, meaning you are inside the virtual environment.
-
-   ```
-   pip install -r requirements.txt
-   ```
-
-#### Install packages
-
-With the virtual environment activated, install packages (these will not affect other projects):
-
-```
-pip install -r requirements.txt
-```
 
 ---
 
-### Run the GUI for development/debug
+## Project Overview
 
-To launch the graphical user interface (GUI) for testing or development, run:
+Keyframe Extractor helps users quickly review the highlights of a video, saving time from frame-by-frame viewing. Simply select a video and click "Start Extraction"—the program will analyze, extract keyframes, and merge them into a single image with timestamp annotations. Ideal for educators, creators, and general users.
 
+---
+
+## Features
+
+- Automatically analyze MP4 videos and extract keyframes
+- Merge all keyframes into a single image with timestamp annotations
+- Modern PyQt5 GUI (supports drag & drop, parameter adjustment, progress bar, multithreading)
+- macOS packaging support (py2app)
+- Complete installation, packaging, and troubleshooting instructions
+- Beginner-friendly: easy to install and use
+
+---
+
+## Tech Stack
+
+- **Python 3.12+**
+- **OpenCV (cv2):** Video processing and frame difference detection
+- **Pillow (PIL):** Image merging and text annotation
+- **Numpy:** Accelerated image computation
+- **PyQt5:** Modern GUI
+- **py2app:** macOS packaging
+- **venv/pyenv:** Virtual environment and Python management
+
+---
+
+## Installation & Getting Started
+
+### 1. Create a virtual environment and install dependencies
+
+```sh
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
+
+### 2. Launch the PyQt5 GUI
+
+```sh
 python extract_keyframes_gui.py
 ```
 
-Make sure your virtual environment is activated before running this command.
+### 3. CLI Usage (for advanced users)
+
+```sh
+python extract_keyframes.py --input input.mp4 --output output_folder/
+```
+
+### 4. macOS Packaging (py2app)
+
+1. Install Homebrew dependencies:
+    ```sh
+    brew install pyenv pyenv-virtualenv
+    ```
+2. Use pyenv to install Python 3.12+, create a venv, and install dependencies.
+3. Build the app:
+    ```sh
+    python setup.py py2app
+    ```
+4. The generated app will be in the `dist/` directory and can be opened directly.
+
+---
+
+## Usage Workflow
+
+1. Launch `extract_keyframes_gui.py`
+2. Drag and drop a video file into the window or use the file selector
+3. Set the output folder and parameters (defaults are available)
+4. Click "Start Extraction"
+5. The program will analyze, extract, merge, and annotate keyframes automatically
+6. The merged image will open automatically upon completion
 
 ---
 
 ## FAQ
 
-### Q1: Why do I get `No module named '_tkinter'` when building or running the app?
-A: Your Python was not built with Tcl/Tk support. Please follow the "Build Python with Tcl/Tk support" section and ensure you use the correct Homebrew tcl-tk@8 path.
-
-### Q2: The GUI app does not launch or crashes immediately. What should I check?
-A: Make sure you are using the virtual environment created from the correct pyenv Python version (with Tcl/Tk support). Activate the venv before running or building.
-
-### Q3: I get errors about missing modules (e.g. `ModuleNotFoundError`) after building.
-A: Double-check that you installed all dependencies inside the venv:  
-```
-pip install -r requirements.txt
-```
-Then rebuild the app.
-
-### Q4: Can I build this app on Windows or Linux?
-A: The current instructions are for macOS (py2app). For Windows, consider using [pyinstaller](https://pyinstaller.org/) or [cx_Freeze](https://cx-freeze.readthedocs.io/). For Linux, you can run the script directly with Python and the required packages. Cross-platform packaging is not yet documented here.
-
-### Q5: How do I update dependencies?
-A: Edit `requirements.txt` and run:
-```
-pip install -r requirements.txt
-```
-Rebuild the app if needed.
-
----
-
-## How to build a standalone macOS app (py2app, tkinter, pyenv)
-
-### 1. Install Homebrew dependencies
-
-You need Homebrew and the following packages:
-
+**Q1: I get `ModuleNotFoundError` when running?**  
+A: Make sure you have activated the venv and installed all dependencies:  
 ```sh
-brew install pyenv pyenv-virtualenv
-brew install tcl-tk@8
-```
-
-### 2. Build Python with Tcl/Tk support
-
-macOS system Python or default pyenv Python may not include tkinter.  
-You must build Python with explicit tcl-tk@8 support:
-
-```sh
-env \
-  LDFLAGS="-L/opt/homebrew/opt/tcl-tk@8/lib" \
-  CPPFLAGS="-I/opt/homebrew/opt/tcl-tk@8/include" \
-  PKG_CONFIG_PATH="/opt/homebrew/opt/tcl-tk@8/lib/pkgconfig" \
-  pyenv install 3.12.3
-```
-
-### 3. Create and activate a virtual environment
-
-```sh
-pyenv shell 3.12.3
-python -m venv venv
 source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### 4. Install dependencies
+**Q2: The GUI does not launch or crashes?**  
+A: Ensure you are using Python installed via pyenv, have activated the venv, and installed PyQt5.
 
+**Q3: How do I run this on Windows/Linux?**  
+A: Packaging instructions are currently for macOS only. On Windows/Linux, run the script directly with Python and install the required dependencies yourself.
+
+**Q4: How do I update dependencies?**  
+A: Edit `requirements.txt` and run:  
 ```sh
 pip install -r requirements.txt
 ```
 
-### 5. Build the app with py2app
+---
 
-```sh
-python setup.py py2app
-```
+## Project Status & Roadmap
 
-The built app will be in `dist/extract_keyframes_gui.app`.
-
-### 6. Run the app
-
-```sh
-open dist/extract_keyframes_gui.app
-```
-
-### Troubleshooting
-
-- **No module named '_tkinter'**:  
-  Your Python was not built with Tcl/Tk support.  
-  Make sure you followed step 2 and used the correct Homebrew tcl-tk@8 path.
-
-- **GUI does not launch or crashes**:  
-  Ensure you are using the venv created from the correct pyenv Python version.
-
-- **Other missing modules**:  
-  Double-check `requirements.txt` and re-run `pip install -r requirements.txt` in your venv.
+- PyQt5 GUI has fully replaced the legacy tkinter version, offering a more complete and modern interface
+- macOS packaging is supported; Windows/Linux packaging is planned
+- Only MP4 format is currently supported; more formats will be added in the future
+- Contributions via issues/PRs are welcome
 
 ---
+
+## Contributing
+
+1. Fork this repository and create a feature branch
+2. Ensure basic tests pass before submitting a PR
+3. For significant changes, please update the memory-bank/ documentation as well
+
+---
+
+## Legacy Architecture (tkinter/legacy)
+
+- The old GUI was based on tkinter and has now been fully replaced by the PyQt5 version
+- macOS packaging with tkinter required special handling of tcl-tk@8; see memory-bank/ and previous README for compatibility details
+
+---
+
+For more technical details, design patterns, and development context, please refer to the files in the `memory-bank/` directory.

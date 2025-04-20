@@ -1,136 +1,24 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
-import threading
-import os
 import sys
-import subprocess
+import os
 import json
-from tkinterdnd2 import DND_FILES, TkinterDnD
+import threading
+import subprocess
+from PyQt5.QtWidgets import (
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFileDialog,
+    QProgressBar, QSlider, QLineEdit, QMessageBox, QGroupBox
+)
+from PyQt5.QtCore import Qt, pyqtSignal, QObject
+from PyQt5.QtGui import QIcon
 from extract_keyframes import extract_keyframes, merge_keyframes
 
-VIDEO_EXTENSIONS = [("MP4 files", "*.mp4"), ("All files", "*.*")]
+VIDEO_EXTENSIONS = "Video Files (*.mp4 *.avi *.mov)"
 DEFAULT_OUTPUT_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
 MERGED_IMAGE_PATH = "keyframes_merged.png"
-
-def run_extraction(
-    video_path, output_dir, status_label, progress, root, open_btn,
-    diff_threshold, sample_rate, min_interval, stillness_threshold, stillness_frames
-):
-    try:
-        # Get percent_label
-        percent_label = None
-        for widget in root.winfo_children():
-            if isinstance(widget, tk.Frame):
-                for w in widget.winfo_children():
-                    if isinstance(w, tk.Label) and w.cget("text").endswith("%"):
-                        percent_label = w
-                        break
-        def progress_callback(current, total):
-            percent = int((current / total) * 90) if total > 0 else 0
-            def update():
-                progress["value"] = percent
-                if percent_label:
-                    percent_label["text"] = f"{percent}%"
-            root.after(0, update)
-
-        status_label.config(text="Extracting keyframes...", fg="#0070c0")
-        progress["value"] = 0
-        if percent_label:
-            percent_label["text"] = "0%"
-        keyframes = extract_keyframes(
-            video_path, output_dir,
-            diff_threshold=diff_threshold,
-            sample_rate=sample_rate,
-            min_interval=min_interval,
-            stillness_threshold=stillness_threshold,
-            stillness_frames=stillness_frames,
-            progress_callback=progress_callback
-        )
-        def set_merging():
-            status_label.config(text="Merging keyframes...", fg="#0070c0")
-            progress["value"] = 95
-            if percent_label:
-                percent_label["text"] = "95%"
-        root.after(0, set_merging)
-        merged_path = os.path.join(output_dir, MERGED_IMAGE_PATH)
-        merge_keyframes(keyframes, merged_path, max_per_row=5)
-        def set_done():
-            status_label.config(text="Completed! Saved to: " + output_dir, fg="green")
-            progress["value"] = 100
-            if percent_label:
-                percent_label["text"] = "100%"
-            open_btn.config(state="normal")
-            open_btn.merged_path = merged_path
-            messagebox.showinfo("Completed", f"Completed! Merged image saved to: {merged_path}")
-        root.after(0, set_done)
-    except Exception as e:
-        def set_error():
-            status_label.config(text="Error", fg="red")
-            progress["value"] = 0
-            if percent_label:
-                percent_label["text"] = "0%"
-            open_btn.config(state="disabled")
-            messagebox.showerror("Error", str(e))
-        root.after(0, set_error)
-
-def start_extraction(
-    video_path_var, output_dir_var, status_label, progress, root, open_btn,
-    diff_threshold_var, sample_rate_var, min_interval_var, stillness_threshold_var, stillness_frames_var
-):
-    video_path = video_path_var.get()
-    output_dir = output_dir_var.get()
-    open_btn.config(state="disabled")
-    if not video_path or not os.path.isfile(video_path):
-        messagebox.showwarning("Please select a video", "Please select a correct MP4 video file.")
-        return
-    if not output_dir:
-        messagebox.showwarning("Please select a folder", "Please select an output folder.")
-        return
-    progress["value"] = 0
-    os.makedirs(output_dir, exist_ok=True)
-    # Read slider values
-    diff_threshold = diff_threshold_var.get()
-    sample_rate = sample_rate_var.get()
-    min_interval = min_interval_var.get()
-    stillness_threshold = stillness_threshold_var.get()
-    stillness_frames = stillness_frames_var.get()
-    threading.Thread(
-        target=run_extraction,
-        args=(
-            video_path, output_dir, status_label, progress, root, open_btn,
-            diff_threshold, sample_rate, min_interval, stillness_threshold, stillness_frames
-        ),
-        daemon=True
-    ).start()
-
-def open_merged_image(btn):
-    if hasattr(btn, "merged_path") and os.path.isfile(btn.merged_path):
-        if sys.platform == "darwin":
-            subprocess.call(["open", btn.merged_path])
-        elif sys.platform == "win32":
-            os.startfile(btn.merged_path)
-        else:
-            subprocess.call(["xdg-open", btn.merged_path])
-
-def select_video(video_path_var, output_dir_var):
-    path = filedialog.askopenfilename(title="Select Video", filetypes=VIDEO_EXTENSIONS)
-    if path:
-        video_path_var.set(path)
-        # Use video filename (without extension) as Downloads subfolder
-        base = os.path.splitext(os.path.basename(path))[0]
-        new_dir = os.path.join(os.path.expanduser("~"), "Downloads", base)
-        output_dir_var.set(new_dir)
-
-def select_output_dir(output_dir_var):
-    path = filedialog.askdirectory(title="Select Output Folder")
-    if path:
-        output_dir_var.set(path)
-
 CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".keyframe_extractor_config.json")
 DEFAULT_PARAMS = {
     "diff_threshold": 25,
     "sample_rate": 24,
-    "min_interval": 0.5,
+    "min_interval": 0.5,  # 0.1~5.0, slider 1~50, value/10
     "stillness_threshold": 3,
     "stillness_frames": 5
 }
@@ -140,7 +28,6 @@ def load_config():
         try:
             with open(CONFIG_PATH, "r") as f:
                 data = json.load(f)
-            # Check all keys exist, fill with default if missing
             for k, v in DEFAULT_PARAMS.items():
                 if k not in data:
                     data[k] = v
@@ -157,176 +44,316 @@ def save_config(params):
     except Exception:
         pass
 
-def main():
-    root = TkinterDnD.Tk()
-    root.title("KeySnap Extractor")
-    root.geometry("600x600")
-    root.configure(bg="#eaf3fa")
+class WorkerSignals(QObject):
+    progress = pyqtSignal(int)
+    status = pyqtSignal(str, str)
+    finished = pyqtSignal(str)
 
-    # Title
-    title = tk.Label(root, text="KeySnap Extractor", bg="#eaf3fa", fg="#1a3a5e", font=("Arial Rounded MT Bold", 20, "bold"))
-    title.pack(pady=(18, 2))
+class ExtractionWorker(threading.Thread):
+    def __init__(self, video_path, output_dir, params, signals):
+        super().__init__()
+        self.video_path = video_path
+        self.output_dir = output_dir
+        self.params = params
+        self.signals = signals
 
-    subtitle = tk.Label(root, text="Automatic Keyframe Extraction and Merging Tool", bg="#eaf3fa", fg="#3e5c7f", font=("Arial", 12))
-    subtitle.pack(pady=(0, 10))
+    def run(self):
+        try:
+            def progress_callback(current, total):
+                percent = int((current / total) * 90) if total > 0 else 0
+                self.signals.progress.emit(percent)
+            self.signals.status.emit("Extracting keyframes...", "#0070c0")
+            keyframes = extract_keyframes(
+                self.video_path, self.output_dir,
+                diff_threshold=self.params["diff_threshold"],
+                sample_rate=self.params["sample_rate"],
+                min_interval=self.params["min_interval"] / 10.0,
+                stillness_threshold=self.params["stillness_threshold"],
+                stillness_frames=self.params["stillness_frames"],
+                progress_callback=progress_callback
+            )
+            self.signals.status.emit("Merging keyframes...", "#0070c0")
+            self.signals.progress.emit(95)
+            merged_path = os.path.join(self.output_dir, MERGED_IMAGE_PATH)
+            merge_keyframes(keyframes, merged_path, max_per_row=5)
+            self.signals.status.emit(f"Completed! Saved to: {self.output_dir}", "green")
+            self.signals.progress.emit(100)
+            self.signals.finished.emit(merged_path)
+        except Exception as e:
+            self.signals.status.emit("Error: " + str(e), "red")
+            self.signals.progress.emit(0)
+            self.signals.finished.emit("")
 
-    # Divider
-    sep = tk.Frame(root, bg="#b5c9d6", height=2)
-    sep.pack(fill="x", padx=30, pady=(0, 10))
+class KeyframeExtractorV2(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("KeySnap Extractor V2")
+        self.setWindowIcon(QIcon("app_icon.png"))
+        self.setMinimumWidth(600)
+        self.params = load_config()
+        self.selected_file = ""
+        self.output_dir = DEFAULT_OUTPUT_DIR
+        self.merged_path = ""
+        self.init_ui()
 
-    video_path_var = tk.StringVar()
-    output_dir_var = tk.StringVar(value=DEFAULT_OUTPUT_DIR)
+    def init_ui(self):
+        main_layout = QVBoxLayout()
+        title = QLabel("KeySnap Extractor V2")
+        title.setStyleSheet("font-size: 22px; font-weight: bold; color: #1a3a5e;")
+        main_layout.addWidget(title, alignment=Qt.AlignCenter)
 
-    # Video selection
-    frame1 = tk.Frame(root, bg="#eaf3fa")
-    frame1.pack(pady=(0, 5))
-    tk.Label(frame1, text="Select MP4 Video:", bg="#eaf3fa", font=("Arial", 12)).pack(side=tk.LEFT, padx=(0, 5))
-    video_entry = tk.Entry(frame1, textvariable=video_path_var, width=36, font=("Arial", 11))
-    video_entry.pack(side=tk.LEFT, padx=5)
-    tk.Button(frame1, text="Browse...", command=lambda: select_video(video_path_var, output_dir_var), font=("Arial", 11), bg="#d0e3fa").pack(side=tk.LEFT, padx=(5, 0))
-    # Drag-and-drop support (whole window)
-    def on_drop(event):
-        files = event.data
-        if files:
-            # Only take the first file
-            path = files.split()[0]
-            if path.lower().endswith('.mp4'):
-                video_path_var.set(path)
-                base = os.path.splitext(os.path.basename(path))[0]
-                new_dir = os.path.join(os.path.expanduser("~"), "Downloads", base)
-                output_dir_var.set(new_dir)
-    root.drop_target_register(DND_FILES)
-    root.dnd_bind('<<Drop>>', on_drop)
+        subtitle = QLabel("Automatic Keyframe Extraction and Merging Tool")
+        subtitle.setStyleSheet("color: #3e5c7f; font-size: 13px;")
+        main_layout.addWidget(subtitle, alignment=Qt.AlignCenter)
 
-    # Output folder selection
-    frame2 = tk.Frame(root, bg="#eaf3fa")
-    frame2.pack(pady=(0, 5))
-    tk.Label(frame2, text="Output Folder:", bg="#eaf3fa", font=("Arial", 12)).pack(side=tk.LEFT, padx=(0, 5))
-    tk.Entry(frame2, textvariable=output_dir_var, width=36, font=("Arial", 11)).pack(side=tk.LEFT, padx=5)
-    tk.Button(frame2, text="Browse...", command=lambda: select_output_dir(output_dir_var), font=("Arial", 11), bg="#d0e3fa").pack(side=tk.LEFT, padx=(5, 0))
+        # Video selection
+        file_layout = QHBoxLayout()
+        self.setAcceptDrops(True)
+        self.file_edit = QLineEdit()
+        self.file_edit.setPlaceholderText("Select a video file")
+        file_layout.addWidget(self.file_edit)
+        file_btn = QPushButton("Browse Video")
+        file_btn.clicked.connect(self.select_video)
+        file_layout.addWidget(file_btn)
+        main_layout.addLayout(file_layout)
 
-    # Parameter sliders
-    param_frame = tk.LabelFrame(root, text="Extraction Parameters", bg="#eaf3fa", fg="#1a3a5e", font=("Arial", 12, "bold"), padx=10, pady=10)
-    param_frame.pack(padx=30, pady=(10, 0), fill="x")
+        # Output folder selection
+        out_layout = QHBoxLayout()
+        self.out_edit = QLineEdit()
+        self.out_edit.setText(self.output_dir)
+        out_layout.addWidget(self.out_edit)
+        out_btn = QPushButton("Browse Output Folder")
+        out_btn.clicked.connect(self.select_output_dir)
+        out_layout.addWidget(out_btn)
+        main_layout.addLayout(out_layout)
 
-    config = load_config()
+        # Parameter controls (sliders)
+        param_group = QGroupBox("Extraction Parameters")
+        param_layout = QVBoxLayout()
 
-    # diff_threshold
-    diff_threshold_var = tk.IntVar(value=config["diff_threshold"])
-    tk.Label(param_frame, text="Frame Diff Threshold", bg="#eaf3fa", font=("Arial", 11)).grid(row=0, column=0, sticky="w")
-    diff_slider = tk.Scale(param_frame, from_=1, to=100, orient="horizontal", variable=diff_threshold_var, bg="#eaf3fa", length=200)
-    diff_slider.grid(row=0, column=1, padx=5)
-    tk.Label(param_frame, textvariable=diff_threshold_var, bg="#eaf3fa", width=4).grid(row=0, column=2)
+        # diff_threshold
+        self.diff_slider = QSlider(Qt.Horizontal)
+        self.diff_slider.setRange(1, 100)
+        self.diff_slider.setValue(self.params["diff_threshold"])
+        self.diff_label = QLabel(f"{self.diff_slider.value()}")
+        self._add_slider_row(param_layout, "Frame Diff Threshold", self.diff_slider, self.diff_label)
 
-    # sample_rate
-    sample_rate_var = tk.IntVar(value=config["sample_rate"])
-    tk.Label(param_frame, text="Sample Rate (fps)", bg="#eaf3fa", font=("Arial", 11)).grid(row=1, column=0, sticky="w")
-    sample_slider = tk.Scale(param_frame, from_=1, to=60, orient="horizontal", variable=sample_rate_var, bg="#eaf3fa", length=200)
-    sample_slider.grid(row=1, column=1, padx=5)
-    tk.Label(param_frame, textvariable=sample_rate_var, bg="#eaf3fa", width=4).grid(row=1, column=2)
+        # sample_rate
+        self.sample_slider = QSlider(Qt.Horizontal)
+        self.sample_slider.setRange(1, 60)
+        self.sample_slider.setValue(self.params["sample_rate"])
+        self.sample_label = QLabel(f"{self.sample_slider.value()}")
+        self._add_slider_row(param_layout, "Sample Rate (fps)", self.sample_slider, self.sample_label)
 
-    # min_interval
-    min_interval_var = tk.DoubleVar(value=config["min_interval"])
-    tk.Label(param_frame, text="Min Interval (s)", bg="#eaf3fa", font=("Arial", 11)).grid(row=2, column=0, sticky="w")
-    min_interval_slider = tk.Scale(param_frame, from_=0.1, to=5.0, resolution=0.1, orient="horizontal", variable=min_interval_var, bg="#eaf3fa", length=200)
-    min_interval_slider.grid(row=2, column=1, padx=5)
-    tk.Label(param_frame, textvariable=min_interval_var, bg="#eaf3fa", width=4).grid(row=2, column=2)
+        # min_interval (0.1~5.0, step 0.1, slider 1~50, value/10)
+        self.min_interval_slider = QSlider(Qt.Horizontal)
+        self.min_interval_slider.setRange(1, 50)
+        self.min_interval_slider.setValue(int(round(self.params["min_interval"] * 10)))
+        self.min_interval_label = QLabel(f"{self.min_interval_slider.value()/10:.1f}")
+        self._add_slider_row(param_layout, "Min Interval (s)", self.min_interval_slider, self.min_interval_label)
 
-    # stillness_threshold
-    stillness_threshold_var = tk.IntVar(value=config["stillness_threshold"])
-    tk.Label(param_frame, text="Stillness Threshold", bg="#eaf3fa", font=("Arial", 11)).grid(row=3, column=0, sticky="w")
-    stillness_threshold_slider = tk.Scale(param_frame, from_=1, to=20, orient="horizontal", variable=stillness_threshold_var, bg="#eaf3fa", length=200)
-    stillness_threshold_slider.grid(row=3, column=1, padx=5)
-    tk.Label(param_frame, textvariable=stillness_threshold_var, bg="#eaf3fa", width=4).grid(row=3, column=2)
+        # stillness_threshold
+        self.stillness_threshold_slider = QSlider(Qt.Horizontal)
+        self.stillness_threshold_slider.setRange(1, 20)
+        self.stillness_threshold_slider.setValue(self.params["stillness_threshold"])
+        self.stillness_threshold_label = QLabel(f"{self.stillness_threshold_slider.value()}")
+        self._add_slider_row(param_layout, "Stillness Threshold", self.stillness_threshold_slider, self.stillness_threshold_label)
 
-    # stillness_frames
-    stillness_frames_var = tk.IntVar(value=config["stillness_frames"])
-    tk.Label(param_frame, text="Stillness Frames", bg="#eaf3fa", font=("Arial", 11)).grid(row=4, column=0, sticky="w")
-    stillness_frames_slider = tk.Scale(param_frame, from_=1, to=20, orient="horizontal", variable=stillness_frames_var, bg="#eaf3fa", length=200)
-    stillness_frames_slider.grid(row=4, column=1, padx=5)
-    tk.Label(param_frame, textvariable=stillness_frames_var, bg="#eaf3fa", width=4).grid(row=4, column=2)
+        # stillness_frames
+        self.stillness_frames_slider = QSlider(Qt.Horizontal)
+        self.stillness_frames_slider.setRange(1, 20)
+        self.stillness_frames_slider.setValue(self.params["stillness_frames"])
+        self.stillness_frames_label = QLabel(f"{self.stillness_frames_slider.value()}")
+        self._add_slider_row(param_layout, "Stillness Frames", self.stillness_frames_slider, self.stillness_frames_label)
 
-    def update_config(*args):
-        params = {
-            "diff_threshold": diff_threshold_var.get(),
-            "sample_rate": sample_rate_var.get(),
-            "min_interval": min_interval_var.get(),
-            "stillness_threshold": stillness_threshold_var.get(),
-            "stillness_frames": stillness_frames_var.get()
+        # Reset button
+        reset_btn = QPushButton("Reset to Default")
+        reset_btn.clicked.connect(self.reset_params)
+        param_layout.addWidget(reset_btn)
+
+        param_group.setLayout(param_layout)
+        main_layout.addWidget(param_group)
+
+        # Status and progress
+        self.status_label = QLabel("")
+        self.status_label.setStyleSheet("color: #0070c0; font-weight: bold;")
+        main_layout.addWidget(self.status_label)
+
+        progress_layout = QHBoxLayout()
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setValue(0)
+        progress_layout.addWidget(self.progress_bar)
+        self.percent_label = QLabel("0%")
+        progress_layout.addWidget(self.percent_label)
+        main_layout.addLayout(progress_layout)
+
+        # Buttons
+        btn_layout = QHBoxLayout()
+        self.start_btn = QPushButton("Start Extraction")
+        self.start_btn.clicked.connect(self.start_extraction)
+        btn_layout.addWidget(self.start_btn)
+
+        self.open_btn = QPushButton("Open Merged Image")
+        self.open_btn.setEnabled(False)
+        self.open_btn.clicked.connect(self.open_merged_image)
+        btn_layout.addWidget(self.open_btn)
+        main_layout.addLayout(btn_layout)
+
+        # Footer
+        footer = QLabel("© 2025 KeySnap Extractor")
+        footer.setStyleSheet("color: #7a8fa6; font-size: 10px;")
+        main_layout.addWidget(footer, alignment=Qt.AlignRight)
+
+        self.setLayout(main_layout)
+        self.connect_param_signals()
+
+    def _add_slider_row(self, layout, label_text, slider, value_label):
+        row = QHBoxLayout()
+        label = QLabel(label_text)
+        label.setMinimumWidth(140)
+        row.addWidget(label)
+        row.addWidget(slider)
+        row.addWidget(value_label)
+        layout.addLayout(row)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            urls = event.mimeData().urls()
+            if urls and urls[0].toLocalFile().lower().endswith(('.mp4', '.avi', '.mov')):
+                event.acceptProposedAction()
+                return
+        event.ignore()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasUrls():
+            urls = event.mimeData().urls()
+            if urls:
+                file_path = urls[0].toLocalFile()
+                if file_path.lower().endswith(('.mp4', '.avi', '.mov')):
+                    self.file_edit.setText(file_path)
+                    # 自動命名 output folder
+                    base = os.path.splitext(os.path.basename(file_path))[0]
+                    new_dir = os.path.join(os.path.expanduser("~"), "Downloads", base)
+                    self.out_edit.setText(new_dir)
+                    self.output_dir = new_dir
+        event.acceptProposedAction()
+
+    def connect_param_signals(self):
+        self.diff_slider.valueChanged.connect(lambda v: self._on_slider_change("diff_threshold", v, self.diff_label))
+        self.sample_slider.valueChanged.connect(lambda v: self._on_slider_change("sample_rate", v, self.sample_label))
+        self.min_interval_slider.valueChanged.connect(lambda v: self._on_slider_change("min_interval", v, self.min_interval_label, True))
+        self.stillness_threshold_slider.valueChanged.connect(lambda v: self._on_slider_change("stillness_threshold", v, self.stillness_threshold_label))
+        self.stillness_frames_slider.valueChanged.connect(lambda v: self._on_slider_change("stillness_frames", v, self.stillness_frames_label))
+
+    def _on_slider_change(self, param, value, label_widget, is_float=False):
+        if is_float:
+            label_widget.setText(f"{value/10:.1f}")
+        else:
+            label_widget.setText(str(value))
+        self.save_params()
+
+    def save_params(self):
+        self.params = {
+            "diff_threshold": self.diff_slider.value(),
+            "sample_rate": self.sample_slider.value(),
+            "min_interval": self.min_interval_slider.value() / 10.0,
+            "stillness_threshold": self.stillness_threshold_slider.value(),
+            "stillness_frames": self.stillness_frames_slider.value()
         }
-        save_config(params)
+        save_config(self.params)
 
-    # Auto-save when slider changes
-    diff_threshold_var.trace_add("write", update_config)
-    sample_rate_var.trace_add("write", update_config)
-    min_interval_var.trace_add("write", update_config)
-    stillness_threshold_var.trace_add("write", update_config)
-    stillness_frames_var.trace_add("write", update_config)
+    def reset_params(self):
+        self.diff_slider.setValue(DEFAULT_PARAMS["diff_threshold"])
+        self.sample_slider.setValue(DEFAULT_PARAMS["sample_rate"])
+        self.min_interval_slider.setValue(int(round(DEFAULT_PARAMS["min_interval"] * 10)))
+        self.min_interval_label.setText(f"{DEFAULT_PARAMS['min_interval']:.1f}")
+        self.stillness_threshold_slider.setValue(DEFAULT_PARAMS["stillness_threshold"])
+        self.stillness_frames_slider.setValue(DEFAULT_PARAMS["stillness_frames"])
+        self.save_params()
 
-    # Reset to Default button
-    def reset_to_default():
-        diff_threshold_var.set(DEFAULT_PARAMS["diff_threshold"])
-        sample_rate_var.set(DEFAULT_PARAMS["sample_rate"])
-        min_interval_var.set(DEFAULT_PARAMS["min_interval"])
-        stillness_threshold_var.set(DEFAULT_PARAMS["stillness_threshold"])
-        stillness_frames_var.set(DEFAULT_PARAMS["stillness_frames"])
-        update_config()
+    def select_video(self):
+        file_path, _ = QFileDialog.getOpenFileName(self, "選擇影片", "", VIDEO_EXTENSIONS)
+        if file_path:
+            self.selected_file = file_path
+            self.file_edit.setText(file_path)
+            # 自動命名 output folder
+            base = os.path.splitext(os.path.basename(file_path))[0]
+            new_dir = os.path.join(os.path.expanduser("~"), "Downloads", base)
+            self.out_edit.setText(new_dir)
+            self.output_dir = new_dir
 
-    reset_btn = tk.Button(param_frame, text="Reset to Default", font=("Arial", 10, "bold"), bg="#f5d0d0", fg="#a33", command=reset_to_default)
-    reset_btn.grid(row=5, column=0, columnspan=3, pady=(10, 0))
+    def select_output_dir(self):
+        dir_path = QFileDialog.getExistingDirectory(self, "選擇輸出資料夾", DEFAULT_OUTPUT_DIR)
+        if dir_path:
+            self.output_dir = dir_path
+            self.out_edit.setText(dir_path)
 
-    # Status and progress
-    status_label = tk.Label(root, text="", fg="#0070c0", bg="#eaf3fa", font=("Arial", 11, "bold"))
-    status_label.pack(pady=(10, 0))
+    def start_extraction(self):
+        video_path = self.file_edit.text()
+        output_dir = self.out_edit.text()
+        if not video_path or not os.path.isfile(video_path):
+            QMessageBox.warning(self, "Error", "Please select a valid video file.")
+            return
+        if not output_dir:
+            QMessageBox.warning(self, "Error", "Please select an output folder.")
+            return
+        os.makedirs(output_dir, exist_ok=True)
+        self.status_label.setText("準備中...")
+        self.progress_bar.setValue(0)
+        self.percent_label.setText("0%")
+        self.open_btn.setEnabled(False)
+        params = {
+            "diff_threshold": self.diff_slider.value(),
+            "sample_rate": self.sample_slider.value(),
+            "min_interval": self.min_interval_slider.value(),
+            "stillness_threshold": self.stillness_threshold_slider.value(),
+            "stillness_frames": self.stillness_frames_slider.value()
+        }
+        self.save_params()
+        self.worker_signals = WorkerSignals()
+        self.worker_signals.progress.connect(self.update_progress)
+        self.worker_signals.status.connect(self.update_status)
+        self.worker_signals.finished.connect(self.extraction_finished)
+        self.worker = ExtractionWorker(video_path, output_dir, params, self.worker_signals)
+        self.worker.start()
 
-    progress_frame = tk.Frame(root, bg="#eaf3fa")
-    progress_frame.pack(pady=(5, 0))
-    progress = ttk.Progressbar(progress_frame, orient="horizontal", length=400, mode="determinate")
-    progress.pack(side=tk.LEFT)
-    percent_label = tk.Label(progress_frame, text="0%", bg="#eaf3fa", font=("Arial", 11, "bold"), width=5)
-    percent_label.pack(side=tk.LEFT, padx=(8, 0))
+    def update_progress(self, percent):
+        self.progress_bar.setValue(percent)
+        self.percent_label.setText(f"{percent}%")
 
-    # Button colors
-    PRIMARY_BG = "#1976d2"
-    PRIMARY_BG_HOVER = "#2196f3"
-    SUCCESS_BG = "#43a047"
-    SUCCESS_BG_HOVER = "#66bb6a"
+    def update_status(self, text, color):
+        self.status_label.setText(text)
+        self.status_label.setStyleSheet(f"color: {color}; font-weight: bold;")
 
-    btn_frame = tk.Frame(root, bg="#eaf3fa")
-    btn_frame.pack(pady=(18, 0))
+    def extraction_finished(self, merged_path):
+        if merged_path and os.path.isfile(merged_path):
+            self.merged_path = merged_path
+            self.open_btn.setEnabled(True)
+            QMessageBox.information(self, "Completed", f"Keyframe extraction and merging completed.\n\nMerged image saved at:\n{merged_path}")
+        else:
+            self.open_btn.setEnabled(False)
 
-    # Create open_btn first, then set start_btn's command
-    open_btn = tk.Button(btn_frame, text="Open Merged Image", width=18, height=2, bg=SUCCESS_BG, activebackground=SUCCESS_BG_HOVER,
-                         fg="#0d2346", font=("Arial", 13, "bold"),
-                         state="disabled", command=lambda: open_merged_image(open_btn))
-    open_btn.pack(side=tk.RIGHT)
+    def open_merged_image(self):
+        if self.merged_path and os.path.isfile(self.merged_path):
+            if sys.platform == "darwin":
+                subprocess.call(["open", self.merged_path])
+            elif sys.platform == "win32":
+                os.startfile(self.merged_path)
+            else:
+                subprocess.call(["xdg-open", self.merged_path])
 
-    def on_enter_open(e): open_btn.config(bg=SUCCESS_BG_HOVER)
-    def on_leave_open(e): open_btn.config(bg=SUCCESS_BG)
-    open_btn.bind("<Enter>", on_enter_open)
-    open_btn.bind("<Leave>", on_leave_open)
-
-    # Create start_btn, command can reference open_btn
-    start_btn = tk.Button(
-        btn_frame, text="Start Extraction", width=18, height=2, bg=PRIMARY_BG, activebackground=PRIMARY_BG_HOVER,
-        fg="#0d2346", font=("Arial", 13, "bold"),
-        command=lambda: start_extraction(
-            video_path_var, output_dir_var, status_label, progress, root, open_btn,
-            diff_threshold_var, sample_rate_var, min_interval_var, stillness_threshold_var, stillness_frames_var
-        )
-    )
-    start_btn.pack(side=tk.RIGHT, padx=(0, 18))
-
-    def on_enter_start(e): start_btn.config(bg=PRIMARY_BG_HOVER)
-    def on_leave_start(e): start_btn.config(bg=PRIMARY_BG)
-    start_btn.bind("<Enter>", on_enter_start)
-    start_btn.bind("<Leave>", on_leave_start)
-
-    # Footer
-    footer = tk.Label(root, text="© 2025 KeySnap Extractor", bg="#eaf3fa", fg="#7a8fa6", font=("Arial", 9))
-    footer.pack(side=tk.BOTTOM, pady=(10, 0))
-
-    root.mainloop()
+import signal
+from PyQt5.QtCore import QTimer
 
 if __name__ == "__main__":
-    main()
+    app = QApplication(sys.argv)
+    window = KeyframeExtractorV2()
+    window.show()
+
+    # Allow Ctrl+C to quit the app in terminal (QTimer workaround for macOS/VSCode)
+    signal.signal(signal.SIGINT, lambda *args: app.quit())
+    timer = QTimer()
+    timer.timeout.connect(lambda: None)
+    timer.start(100)
+
+    sys.exit(app.exec_())

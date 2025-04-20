@@ -2,7 +2,7 @@
 
 ## System Architecture
 - Single Python application, with both CLI and GUI entry points
-- GUI is based on tkinter, calling the core logic in extract_keyframes.py
+- GUI is based on PyQt5, calling the core logic in extract_keyframes.py
 - Video processing and image merging logic are centralized in extract_keyframes.py
 - Packaging process is based on py2app, with entry point defined in setup.py
 
@@ -10,8 +10,8 @@
 - Use OpenCV for video processing and frame difference detection
 - Pillow is responsible for image merging and text annotation
 - Numpy accelerates image computation
-- GUI uses tkinter to ensure cross-platform compatibility
-- macOS packaging uses py2app, with explicit documentation of tcl-tk/pyenv dependencies
+- GUI uses PyQt5 for a modern, cross-platform interface
+- macOS packaging uses py2app, with explicit documentation of pyenv dependencies
 
 ## Design Patterns in Use
 - Shallow MVC separation: GUI (View/Controller) and video processing (Model/Logic) are separated

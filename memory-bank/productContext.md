@@ -17,7 +17,7 @@ Keyframe Extractor aims to automate this process, allowing users to obtain the m
 
 ## User experience goals
 - Simple and intuitive workflow, no technical background required
-- Modern and clear GUI, with clear status feedback
+- Modern and clear GUI (PyQt5), with clear status feedback
 - Instant error prompts and troubleshooting suggestions for common issues
 - Complete documentation and FAQ friendly to beginners
 - Supports macOS packaging, with future extensibility to Windows/Linux

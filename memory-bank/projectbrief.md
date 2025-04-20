@@ -9,13 +9,13 @@ Automatically extract keyframes from videos and merge them into a single image, 
 ## Core Requirements
 - Support automatic analysis of MP4 videos and extraction of keyframes
 - Merge all keyframes into a single image with timestamp annotations
-- Provide a simple GUI interface (tkinter)
+- Provide a modern GUI interface (PyQt5)
 - Support macOS packaging (py2app) with complete packaging instructions
 - Easy for beginners to install, use, and troubleshoot
 
 ## Scope
 - Python 3 + OpenCV + Pillow + Numpy
-- GUI interface (tkinter)
+- GUI interface (PyQt5)
 - macOS py2app packaging and FAQ
 - Extensible to Windows/Linux support
 - Documentation and memory bank maintained in sync
