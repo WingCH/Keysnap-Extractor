@@ -1,4 +1,8 @@
+
 # Keyframe Extractor
+
+<video src="readme_resources/demo.mp4" width="500" controls></video>
+
 
 ## What does this project do?
 
