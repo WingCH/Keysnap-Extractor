@@ -87,7 +87,7 @@ class ExtractionWorker(threading.Thread):
 class KeyframeExtractorV2(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("KeySnap Extractor V2")
+        self.setWindowTitle("KeySnap Extractor")
         self.setWindowIcon(QIcon("app_icon.png"))
         self.setMinimumWidth(600)
         self.params = load_config()
@@ -98,7 +98,7 @@ class KeyframeExtractorV2(QWidget):
 
     def init_ui(self):
         main_layout = QVBoxLayout()
-        title = QLabel("KeySnap Extractor V2")
+        title = QLabel("KeySnap Extractor")
         title.setStyleSheet("font-size: 22px; font-weight: bold; color: #1a3a5e;")
         main_layout.addWidget(title, alignment=Qt.AlignCenter)
 
