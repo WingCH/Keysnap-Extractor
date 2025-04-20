@@ -21,15 +21,17 @@ def get_frame_diff(img1, img2):
 
 def extract_keyframes(
     video_path, output_dir, diff_threshold=25, sample_rate=24, min_interval=0.5,
-    stillness_threshold=3, stillness_frames=5
+    stillness_threshold=3, stillness_frames=5, progress_callback=None
 ):
     """
     Only extract keyframe when the image is stable for stillness_frames frames.
     stillness_threshold: pixel diff threshold to consider as 'still'
     stillness_frames: how many frames must be still to be considered stable
+    progress_callback: function(current_frame, total_frames)
     """
     ensure_dir(output_dir)
     cap = cv2.VideoCapture(video_path)
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = cap.get(cv2.CAP_PROP_FPS)
     frame_interval = int(fps // sample_rate)
     prev_gray = None
@@ -46,6 +48,8 @@ def extract_keyframes(
             break
         if frame_idx % frame_interval != 0:
             frame_idx += 1
+            if progress_callback:
+                progress_callback(frame_idx, total_frames)
             continue
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         timestamp = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
@@ -78,6 +82,8 @@ def extract_keyframes(
 
         prev_state_still = is_still
         frame_idx += 1
+        if progress_callback:
+            progress_callback(frame_idx, total_frames)
     cap.release()
     return keyframes
 
