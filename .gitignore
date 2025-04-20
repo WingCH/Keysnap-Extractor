@@ -11,3 +11,13 @@ __pycache__/
 # Keyframes output
 keyframes/
 
+
+build/
+
+dist/
+
+*.app
+
+*.dmg
+
+*.zip
