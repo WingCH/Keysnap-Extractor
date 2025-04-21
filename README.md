@@ -2,7 +2,7 @@
 
 Automatically extract keyframes from videos and merge them into a single image, allowing you to grasp the main content of a video at a glance.
 
-https://github.com/user-attachments/assets/b258f4cd-bc14-4620-883c-cf2411b8b702
+https://github.com/user-attachments/assets/b5922cfb-0727-4f04-a174-5b0e1954f4cb
 
 ---
 
